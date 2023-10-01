@@ -480,7 +480,7 @@ core_bridge_cmd icb (
 	
 	reg	[31:0]	signed_value;
 	
-	reg	[31:0]	debug_value = 32'h12005678;
+	reg	[31:0]	debug_value = 32'h1200566b;
 
 always @(posedge clk_74a) begin
 
@@ -602,6 +602,14 @@ assign video_hs = vidout_hs;
 	localparam	VID_H_BPORCH = 'd10;
 	localparam	VID_H_ACTIVE = 'd320;
 	localparam	VID_H_TOTAL = 'd400;
+
+	// TODO: why don't these work?
+	// localparam	VID_V_BPORCH = 'd8;
+	// localparam	VID_V_ACTIVE = 'd240;
+	// localparam	VID_V_TOTAL = 'd262;
+	// localparam	VID_H_BPORCH = 'd23;
+	// localparam	VID_H_ACTIVE = 'd256;
+	// localparam	VID_H_TOTAL = 'd336; //'d309;
 	
 	reg	[15:0]	frame_count;
 	
@@ -683,6 +691,10 @@ always @(posedge video_rgb_clock or negedge reset_n) begin
 				// data enable. this is the active region of the line
 				vidout_de <= 1;
 				
+				vidout_rgb[23:16] <= ((((x_count - VID_H_BPORCH)&7)==0) | (((y_count - VID_V_BPORCH)&7)==0)) ? 8'hff : 0;
+				vidout_rgb[15:8]  <= ((y_count - VID_V_BPORCH) >> 4) & 1 ? 8'hff : 0;
+				vidout_rgb[7:0]	  <= ((x_count - VID_H_BPORCH) >> 4) & 1 ? 8'hff : 0;
+				`ifdef SLIDE_XOR
 				// generate the sliding XOR background
 				vidout_rgb[23:16] <= (visible_x + frame_count / 1) ^ (visible_y + frame_count/1);
 				vidout_rgb[15:8]  <= (visible_x + frame_count / 2) ^ (visible_y - frame_count/2);
@@ -715,15 +727,18 @@ always @(posedge video_rgb_clock or negedge reset_n) begin
 						// change color of the square based on button state.
 						// note: because the button state could change in the middle of the frame,
 						// tearing on the square color could occur, but this is normal.
-						if(cont1_key[4])	
-							vidout_rgb <= 24'hFF00FF; 
-						else if(cont1_key[5])	
-							vidout_rgb <= 24'h00FF00; 
-						else 
-							vidout_rgb <= 24'hFFFFFF; 
+						if(cont1_key[4])
+							// vidout_rgb <= 24'hFF0000;
+							vidout_rgb[23:16] <= 8'hFF;
+						if(cont1_key[5])
+							// vidout_rgb <= 24'h00FF00;
+							vidout_rgb[15:8] <= 8'hFF;
+						if (!cont1_key[4] && !cont1_key[5])
+							vidout_rgb <= 24'hFFFFFF;
 					end
 				end
-				
+
+				`endif
 			end 
 		end
 		
